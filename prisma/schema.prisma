@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  COMPANY_ADMIN
+  DRIVER
+  PASSENGER
+}
+
+enum TicketStatus {
+  RESERVED
+  PAID
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String
+  role      Role     @default(PASSENGER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets   Ticket[]
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  nit       String   @unique
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  buses     Bus[]
+  routes    Route[]
+
+  @@map("companies")
+}
+
+model Bus {
+  id          String   @id @default(uuid())
+  plate       String   @unique
+  capacity    Int
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trips       Trip[]
+
+  @@map("buses")
+}
+
+model Route {
+  id          String   @id @default(uuid())
+  origin      String
+  destination String
+  price       Decimal  @db.Decimal(10, 2)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trips       Trip[]
+
+  @@map("routes")
+}
+
+model Trip {
+  id             String   @id @default(uuid())
+  departureTime  DateTime
+  availableSeats Int
+  busId          String
+  bus            Bus      @relation(fields: [busId], references: [id])
+  routeId        String
+  route          Route    @relation(fields: [routeId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tickets        Ticket[]
+
+  @@map("trips")
+}
+
+model Ticket {
+  id          String       @id @default(uuid())
+  seatNumber  Int
+  status      TicketStatus @default(RESERVED)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  tripId      String
+  trip        Trip         @relation(fields: [tripId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([tripId, seatNumber])
+  @@map("tickets")
+}
