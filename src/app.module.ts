@@ -1,11 +1,20 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma-module';
 import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { BusModule } from './bus/bus.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // Carga el .env globalmente en toda la aplicación
+    }),
+    PrismaModule,
+    AuthModule,
+    BusModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
