@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -26,6 +25,8 @@ model User {
   password  String
   fullName  String
   role      Role     @default(PASSENGER)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -44,6 +45,7 @@ model Company {
 
   buses     Bus[]
   routes    Route[]
+  users     User[]
 
   @@map("companies")
 }
