@@ -1,26 +1,28 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateBusDto, UpdateBusDto } from './dto/bus-dto';
+import { CreateRouteDto, UpdateRouteDto } from './dto/route.dto';
 import { Role } from '@prisma/client';
 
 @Injectable()
-export class BusesService {
+export class RoutesService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async create(createBusDto: CreateBusDto, user: { role: Role; companyId?: string }) {
+    async create(createRouteDto: CreateRouteDto, user: { role: Role; companyId?: string }) {
+        // Si es un ADMIN global, se le exige que tenga una compañía asignada o manejamos su lógica. 
+        // Para un COMPANY_ADMIN, inyectamos obligatoriamente su companyId del token.
         if (user.role === Role.COMPANY_ADMIN && !user.companyId) {
             throw new ForbiddenException('User is not bound to any company');
         }
 
-        const companyIdToUse = user.role === Role.ADMIN ? (createBusDto as any).companyId || user.companyId : user.companyId;
+        const companyIdToUse = user.role === Role.ADMIN ? (createRouteDto as any).companyId || user.companyId : user.companyId;
 
         if (!companyIdToUse) {
-            throw new ForbiddenException('Company ID is required to create a bus');
+            throw new ForbiddenException('Company ID is required to create a route');
         }
 
-        return this.prisma.bus.create({
+        return this.prisma.route.create({
             data: {
-                ...createBusDto,
+                ...createRouteDto,
                 companyId: companyIdToUse,
             },
             include: { company: true },
@@ -30,7 +32,7 @@ export class BusesService {
     async findAll(user: { role: Role; companyId?: string }) {
         const filter = user.role === Role.ADMIN ? {} : { companyId: user.companyId };
 
-        return this.prisma.bus.findMany({
+        return this.prisma.route.findMany({
             where: filter,
             include: { company: true },
         });
@@ -42,34 +44,34 @@ export class BusesService {
             filter.companyId = user.companyId;
         }
 
-        const bus = await this.prisma.bus.findFirst({
+        const route = await this.prisma.route.findFirst({
             where: filter,
             include: { company: true },
         });
 
-        if (!bus) {
-            throw new NotFoundException(`Bus with ID ${id} not found or access denied`);
+        if (!route) {
+            throw new NotFoundException(`Route with ID ${id} not found or access denied`);
         }
 
-        return bus;
+        return route;
     }
 
-    async update(id: string, updateBusDto: UpdateBusDto, user: { role: Role; companyId?: string }) {
-        // Valida existencia y pertenencia a la compañía antes de actualizar
+    async update(id: string, updateRouteDto: UpdateRouteDto, user: { role: Role; companyId?: string }) {
+        // Aseguramos que la ruta exista y pertenezca a la compañía del usuario antes de actualizar
         await this.findOne(id, user);
 
-        return this.prisma.bus.update({
+        return this.prisma.route.update({
             where: { id },
-            data: updateBusDto,
+            data: updateRouteDto,
             include: { company: true },
         });
     }
 
     async remove(id: string, user: { role: Role; companyId?: string }) {
-        // Valida existencia y pertenencia antes de eliminar
+        // Aseguramos que pertenezca a su compañía antes de borrar
         await this.findOne(id, user);
 
-        return this.prisma.bus.delete({
+        return this.prisma.route.delete({
             where: { id },
         });
     }
