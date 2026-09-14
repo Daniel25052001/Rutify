@@ -17,7 +17,7 @@ export class BusesController {
     constructor(private readonly busesService: BusesService) { }
 
     @Post()
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Registrar un nuevo autobús',
         description: 'Crea un autobús en el sistema asociado a la compañía del usuario administrador autenticado (o la compañía especificada si es Super ADMIN).',
@@ -101,7 +101,7 @@ export class BusesController {
     }
 
     @Patch(':id')
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Actualizar datos de un autobús',
         description: 'Modifica la información de un autobús existente (placa o capacidad).',
@@ -142,7 +142,7 @@ export class BusesController {
     }
 
     @Delete(':id')
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Eliminar un autobús',
         description: 'Elimina un autobús del sistema si pertenece a la compañía correspondiente.',

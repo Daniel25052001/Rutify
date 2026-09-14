@@ -8,6 +8,7 @@ import { BusModule } from './bus/bus.module';
 import { RoutesModule } from './routes/routes.module';
 import { TripModule } from './trip/trip.module';
 import { TicketModule } from './ticket/ticket.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TicketModule } from './ticket/ticket.module';
     RoutesModule,
     TripModule,
     TicketModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,6 +8,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Habilitar CORS para permitir la comunicación segura con el frontend (puerto 5173)
+  app.enableCors();
+
   // Validación global de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
@@ -37,7 +40,7 @@ async function bootstrap() {
         description: 'Ingrese el token JWT con el prefijo Bearer (Ejemplo: "Bearer eyJhbGciOi...")',
         in: 'header',
       },
-      'JWT-auth', // Nombre de la referencia de seguridad usada en @ApiBearerAuth('JWT-auth') o global
+      'JWT-auth',
     )
     .addTag('Auth', 'Endpoints de autenticación y control de acceso de usuarios')
     .addTag('Buses', 'Gestión del parque automotor y capacidad de autobuses')
@@ -56,7 +59,7 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`🚀 Rutify API corriendo en: http://localhost:${port}`);
-  console.log(`📚 Swagger UI disponible en: http://localhost:${port}/api/docs`);
+  console.log(`Rutify API corriendo en: http://localhost:${port}`);
+  console.log(`Swagger UI disponible en: http://localhost:${port}/api/docs`);
 }
 bootstrap();

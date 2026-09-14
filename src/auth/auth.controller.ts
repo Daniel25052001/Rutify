@@ -6,8 +6,8 @@ import {
     ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
 import {
     AuthResponseDto,
     UserProfileResponseDto,
@@ -28,29 +28,29 @@ export type AuthUser = Omit<User, 'password'>;
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @Post('register')
+    @Post('accept-invitation')
     @ApiOperation({
-        summary: 'Registrar un nuevo usuario',
-        description: 'Crea una cuenta en el sistema y retorna el token JWT de sesión junto a la información del usuario.',
+        summary: 'Aceptar invitación y registrar contraseña',
+        description: 'Permite a un empleado invitado configurar su contraseña y activar su cuenta corporativa mediante un token único.',
     })
     @ApiResponse({
         status: 201,
-        description: 'Usuario registrado exitosamente.',
+        description: 'Cuenta activada exitosamente.',
         type: AuthResponseDto,
     })
     @ApiResponse({
         status: 400,
-        description: 'Datos de registro inválidos o el correo ya se encuentra registrado.',
+        description: 'Token inválido, expirado o correo ya registrado.',
         type: HttpErrorResponseDto,
     })
-    register(@Body() dto: RegisterDto) {
-        return this.authService.register(dto);
+    acceptInvitation(@Body() dto: AcceptInvitationDto) {
+        return this.authService.acceptInvitation(dto);
     }
 
     @Post('login')
     @ApiOperation({
         summary: 'Iniciar sesión',
-        description: 'Autentica al usuario mediante email y contraseña, retornando el token de acceso JWT.',
+        description: 'Autentica al usuario mediante email y contraseña, retornando el token de acceso JWT con su respectivo tenant y rol.',
     })
     @ApiResponse({
         status: 200,
@@ -59,7 +59,7 @@ export class AuthController {
     })
     @ApiResponse({
         status: 401,
-        description: 'Credenciales inválidas (correo o contraseña incorrectos).',
+        description: 'Credenciales inválidas.',
         type: HttpErrorResponseDto,
     })
     login(@Body() dto: LoginDto) {
@@ -71,70 +71,29 @@ export class AuthController {
     @Get('profile')
     @ApiOperation({
         summary: 'Obtener perfil del usuario autenticado',
-        description: 'Retorna los datos del usuario en sesión a partir del token JWT Bearer provisto.',
+        description: 'Retorna los datos del usuario en sesión incluyendo su empresa asociada.',
     })
     @ApiResponse({
         status: 200,
         description: 'Perfil del usuario recuperado exitosamente.',
         type: UserProfileResponseDto,
     })
-    @ApiResponse({
-        status: 401,
-        description: 'No autorizado. Token inexistente, inválido o expirado.',
-        type: HttpErrorResponseDto,
-    })
     getProfile(@GetUser() user: AuthUser) {
         return user;
     }
 
     @ApiBearerAuth('JWT-auth')
-    @UseGuards(JwtAuthGuard)
-    @Get('my-id')
-    @ApiOperation({
-        summary: 'Obtener ID del usuario autenticado',
-        description: 'Retorna el identificador único del usuario autenticado extraído de los claims del token.',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'ID de usuario retornado con éxito.',
-        type: UserIdResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autorizado. Token no proporcionado o inválido.',
-        type: HttpErrorResponseDto,
-    })
-    getUserId(@GetUser('id') userId: string) {
-        return { userId };
-    }
-
-    @ApiBearerAuth('JWT-auth')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
-    @Get('admin-only')
+    @Roles(Role.COMPANY_ADMIN)
+    @Get('company-dashboard')
     @ApiOperation({
-        summary: 'Recurso exclusivo para administradores',
-        description: 'Endpoint protegido que requiere token JWT válido y rol ADMIN para acceder.',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'Acceso concedido al panel de administración.',
-        type: AdminOnlyResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autorizado.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'Prohibido. El usuario autenticado no posee el rol ADMIN requerido.',
-        type: HttpErrorResponseDto,
+        summary: 'Recurso exclusivo para administradores de compañía',
+        description: 'Endpoint protegido que requiere token JWT válido y rol COMPANY_ADMIN.',
     })
     getAdminData(@GetUser() user: AuthUser) {
         return {
-            message: 'Bienvenido al panel de administración',
-            adminName: user.fullName,
+            message: 'Bienvenido al panel administrativo de la compañía',
+            companyId: user.companyId,
         };
     }
 }

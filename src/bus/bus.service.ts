@@ -12,7 +12,7 @@ export class BusesService {
             throw new ForbiddenException('User is not bound to any company');
         }
 
-        const companyIdToUse = user.role === Role.ADMIN ? (createBusDto as any).companyId || user.companyId : user.companyId;
+        const companyIdToUse = user.role === Role.SUPER_ADMIN ? (createBusDto as any).companyId || user.companyId : user.companyId;
 
         if (!companyIdToUse) {
             throw new ForbiddenException('Company ID is required to create a bus');
@@ -28,7 +28,7 @@ export class BusesService {
     }
 
     async findAll(user: { role: Role; companyId?: string }) {
-        const filter = user.role === Role.ADMIN ? {} : { companyId: user.companyId };
+        const filter = user.role === Role.SUPER_ADMIN ? {} : { companyId: user.companyId };
 
         return this.prisma.bus.findMany({
             where: filter,
@@ -38,7 +38,7 @@ export class BusesService {
 
     async findOne(id: string, user: { role: Role; companyId?: string }) {
         const filter: any = { id };
-        if (user.role !== Role.ADMIN) {
+        if (user.role !== Role.SUPER_ADMIN) {
             filter.companyId = user.companyId;
         }
 
@@ -55,7 +55,6 @@ export class BusesService {
     }
 
     async update(id: string, updateBusDto: UpdateBusDto, user: { role: Role; companyId?: string }) {
-        // Valida existencia y pertenencia a la compañía antes de actualizar
         await this.findOne(id, user);
 
         return this.prisma.bus.update({
@@ -66,7 +65,6 @@ export class BusesService {
     }
 
     async remove(id: string, user: { role: Role; companyId?: string }) {
-        // Valida existencia y pertenencia antes de eliminar
         await this.findOne(id, user);
 
         return this.prisma.bus.delete({
