@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('ADMIN', 'COMPANY_ADMIN', 'DRIVER', 'PASSENGER');
+CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'COMPANY_ADMIN', 'DRIVER', 'PASSENGER');
 
 -- CreateEnum
 CREATE TYPE "TicketStatus" AS ENUM ('RESERVED', 'PAID', 'CANCELLED');
@@ -11,6 +11,7 @@ CREATE TABLE "users" (
     "password" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'PASSENGER',
+    "companyId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -27,6 +28,20 @@ CREATE TABLE "companies" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "companies_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "invitations" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "role" "Role" NOT NULL DEFAULT 'DRIVER',
+    "companyId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "acceptedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "invitations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -87,10 +102,19 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "companies_nit_key" ON "companies"("nit");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "invitations_token_key" ON "invitations"("token");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "buses_plate_key" ON "buses"("plate");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tickets_tripId_seatNumber_key" ON "tickets"("tripId", "seatNumber");
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "invitations" ADD CONSTRAINT "invitations_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "buses" ADD CONSTRAINT "buses_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
