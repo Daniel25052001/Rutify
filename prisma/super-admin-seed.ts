@@ -26,8 +26,8 @@ async function main() {
     }
 
     // 2. Crear o actualizar el Super Admin usando minúsculas obligatorias
-    const emailRoot = 'superrutify@gmail.com';
-    const plainPassword = 'RutifyMasterSecure2026*';
+    const emailRoot = 'superrutify@gmail.com'; //CORREO
+    const plainPassword = 'RutifyMasterSecure2026*'; //CONTRASEÑA
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
     // Upsert asegura que si ya existe (sin importar mayúsculas previas), se actualice con la contraseña y correo correctos
