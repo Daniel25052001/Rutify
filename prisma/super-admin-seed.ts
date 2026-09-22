@@ -25,26 +25,28 @@ async function main() {
         console.log(`[Seed]: Compañía creada con ID: ${company.id}`);
     }
 
-    // 2. Crear o verificar el Super Admin
-    const emailRoot = 'SuperRutify@gmail.com';
-    const existingAdmin = await prisma.user.findUnique({
+    // 2. Crear o actualizar el Super Admin usando minúsculas obligatorias
+    const emailRoot = 'superrutify@gmail.com'; //CORREO
+    const plainPassword = 'RutifyMasterSecure2026*'; //CONTRASEÑA
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    // Upsert asegura que si ya existe (sin importar mayúsculas previas), se actualice con la contraseña y correo correctos
+    const admin = await prisma.user.upsert({
         where: { email: emailRoot },
+        update: {
+            password: hashedPassword,
+            fullName: 'Super Rutify',
+            role: 'SUPER_ADMIN',
+        },
+        create: {
+            email: emailRoot,
+            fullName: 'Super Rutify',
+            password: hashedPassword,
+            role: 'SUPER_ADMIN',
+        },
     });
 
-    if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash('RutifyMasterSecure2026*', 10);
-        await prisma.user.create({
-            data: {
-                email: emailRoot,
-                fullName: 'Super Rutify',
-                password: hashedPassword,
-                role: 'SUPER_ADMIN',
-            },
-        });
-        console.log(`[Seed]: Super Administrador (${emailRoot}) creado exitosamente.`);
-    } else {
-        console.log(`[Seed]: El Super Administrador ya existe.`);
-    }
+    console.log(`[Seed]: Super Administrador (${admin.email}) sincronizado exitosamente.`);
 }
 
 main()

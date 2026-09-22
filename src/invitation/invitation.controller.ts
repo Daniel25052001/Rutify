@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
@@ -26,5 +26,30 @@ export class InvitationController {
     @HttpCode(HttpStatus.CREATED)
     async create(@Body() dto: CreateInvitationDto) {
         return await this.invitationService.createInvitation(dto);
+    }
+
+    @Get()
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
+    @ApiOperation({
+        summary: 'Listar todas las invitaciones',
+        description: 'Retorna el historial completo de invitaciones emitidas en la plataforma.',
+    })
+    @ApiResponse({ status: 200, description: 'Lista de invitaciones obtenida exitosamente.' })
+    @HttpCode(HttpStatus.OK)
+    async findAll() {
+        return await this.invitationService.findAllInvitations();
+    }
+
+    @Delete(':id')
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
+    @ApiOperation({
+        summary: 'Revocar una invitación',
+        description: 'Elimina o invalida una invitación activa mediante su identificador único.',
+    })
+    @ApiResponse({ status: 200, description: 'Invitación revocada exitosamente.' })
+    @ApiResponse({ status: 404, description: 'Invitación no encontrada.' })
+    @HttpCode(HttpStatus.OK)
+    async remove(@Param('id') id: string) {
+        return await this.invitationService.revokeInvitation(id);
     }
 }
