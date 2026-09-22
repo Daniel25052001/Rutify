@@ -17,7 +17,7 @@ export class TripsController {
     constructor(private readonly tripsService: TripsService) { }
 
     @Post()
-    @Roles(Role.COMPANY_ADMIN, Role.ADMIN)
+    @Roles(Role.COMPANY_ADMIN, Role.SUPER_ADMIN)
     @ApiOperation({
         summary: 'Programar un nuevo viaje',
         description: 'Crea un nuevo itinerario de viaje asignando un autobús, una ruta y la cantidad de asientos disponibles.',
@@ -48,7 +48,7 @@ export class TripsController {
     }
 
     @Get()
-    @Roles(Role.COMPANY_ADMIN, Role.ADMIN, Role.DRIVER, Role.PASSENGER)
+    @Roles(Role.COMPANY_ADMIN, Role.SUPER_ADMIN, Role.DRIVER, Role.PASSENGER)
     @ApiOperation({
         summary: 'Listar todos los viajes de la compañía',
         description: 'Retorna los viajes asociados a los autobuses de la compañía del usuario autenticado.',

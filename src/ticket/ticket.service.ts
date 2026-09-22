@@ -1,38 +1,68 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { TicketStatus } from '@prisma/client';
+import { TicketStatus, Role } from '@prisma/client';
 
 @Injectable()
 export class TicketsService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(createTicketDto: CreateTicketDto, userId: string) {
-        const trip = await this.prisma.trip.findUnique({
-            where: { id: createTicketDto.tripId },
-        });
-
-        if (!trip) {
-            throw new NotFoundException('El viaje especificado no existe');
-        }
-
-        if (trip.availableSeats <= 0) {
-            throw new ConflictException('No hay asientos disponibles para este viaje');
-        }
+        const { tripId, seatNumber } = createTicketDto;
 
         return this.prisma.$transaction(async (tx) => {
+            // 1. Buscar el viaje y bloquear/verificar disponibilidad
+            const trip = await tx.trip.findUnique({
+                where: { id: tripId },
+                include: { bus: true },
+            });
+
+            if (!trip) {
+                throw new NotFoundException('El viaje especificado no existe.');
+            }
+
+            if (trip.availableSeats <= 0) {
+                throw new ConflictException('No hay asientos disponibles en este viaje.');
+            }
+
+            // 2. Validar si el asiento específico ya está ocupado (si manejas número de asiento)
+            if (seatNumber) {
+                const existingTicket = await tx.ticket.findFirst({
+                    where: {
+                        tripId,
+                        seatNumber,
+                        status: { not: TicketStatus.CANCELLED },
+                    },
+                });
+
+                if (existingTicket) {
+                    throw new ConflictException(`El asiento número ${seatNumber} ya ha sido reservado.`);
+                }
+            }
+
+            // 3. Crear el tiquete
             const ticket = await tx.ticket.create({
                 data: {
-                    seatNumber: createTicketDto.seatNumber,
-                    tripId: createTicketDto.tripId,
-                    userId: userId,
+                    tripId,
+                    userId,
+                    seatNumber,
                     status: TicketStatus.RESERVED,
+                },
+                include: {
+                    trip: {
+                        include: { route: true, bus: true },
+                    },
                 },
             });
 
+            // 4. Decrementar el cupo disponible en el viaje de forma atómica
             await tx.trip.update({
-                where: { id: createTicketDto.tripId },
-                data: { availableSeats: trip.availableSeats - 1 },
+                where: { id: tripId },
+                data: {
+                    availableSeats: {
+                        decrement: 1,
+                    },
+                },
             });
 
             return ticket;
@@ -45,92 +75,51 @@ export class TicketsService {
             include: {
                 trip: {
                     include: {
-                        route: true,
                         bus: true,
+                        route: true,
                     },
                 },
             },
+            orderBy: { createdAt: 'desc' },
         });
     }
 
-    async cancel(ticketId: string, userId: string, userRole: string) {
-        const ticket = await this.prisma.ticket.findUnique({
-            where: { id: ticketId },
-            include: { trip: true },
-        });
-
-        if (!ticket) {
-            throw new NotFoundException('El boleto no existe');
-        }
-
-        if (ticket.userId !== userId && userRole !== 'ADMIN' && userRole !== 'COMPANY_ADMIN') {
-            throw new ForbiddenException('No tienes permisos para cancelar este boleto');
-        }
-
-        if (ticket.status === TicketStatus.CANCELLED) {
-            throw new ConflictException('El boleto ya se encuentra cancelado');
-        }
-
+    async cancel(ticketId: string, userId: string, userRole: Role) {
         return this.prisma.$transaction(async (tx) => {
+            const ticket = await tx.ticket.findUnique({
+                where: { id: ticketId },
+                include: { trip: true },
+            });
+
+            if (!ticket) {
+                throw new NotFoundException('El boleto no existe.');
+            }
+
+            if (userRole !== Role.SUPER_ADMIN && ticket.userId !== userId) {
+                throw new ForbiddenException('No tienes permisos para cancelar este boleto.');
+            }
+
+            if (ticket.status === TicketStatus.CANCELLED) {
+                throw new ConflictException('El boleto ya se encuentra cancelado.');
+            }
+
+            // Actualizar estado del tiquete
             const updatedTicket = await tx.ticket.update({
                 where: { id: ticketId },
                 data: { status: TicketStatus.CANCELLED },
             });
 
+            // Retornar el asiento al viaje
             await tx.trip.update({
                 where: { id: ticket.tripId },
-                data: { availableSeats: ticket.trip.availableSeats + 1 },
+                data: {
+                    availableSeats: {
+                        increment: 1,
+                    },
+                },
             });
 
             return updatedTicket;
-        });
-    }
-
-    async updateStatus(ticketId: string, status: TicketStatus, userId: string, userRole: string) {
-        const ticket = await this.prisma.ticket.findUnique({
-            where: { id: ticketId },
-        });
-
-        if (!ticket) {
-            throw new NotFoundException('El boleto no existe');
-        }
-
-        if (ticket.userId !== userId && userRole !== 'ADMIN' && userRole !== 'COMPANY_ADMIN') {
-            throw new ForbiddenException('No tienes permisos para modificar este boleto');
-        }
-
-        return this.prisma.ticket.update({
-            where: { id: ticketId },
-            data: { status },
-        });
-    }
-
-
-
-
-
-
-    async findAllByTrip(tripId: string, companyId: string, userRole: string) {
-        const trip = await this.prisma.trip.findUnique({
-            where: { id: tripId },
-            include: { bus: true },
-        });
-
-        if (!trip) {
-            throw new NotFoundException('El viaje no existe');
-        }
-
-        if (userRole === 'COMPANY_ADMIN' && trip.bus.companyId !== companyId) {
-            throw new ForbiddenException('No tienes acceso a los tiquetes de este viaje');
-        }
-
-        return this.prisma.ticket.findMany({
-            where: { tripId },
-            include: {
-                user: {
-                    select: { id: true, email: true },
-                },
-            },
         });
     }
 }

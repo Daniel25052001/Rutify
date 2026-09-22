@@ -17,7 +17,7 @@ export class RoutesController {
     constructor(private readonly routesService: RoutesService) { }
 
     @Post()
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Crear una nueva ruta de transporte',
         description: 'Registra un origen, destino y tarifa asociado a la compañía del usuario autenticado.',
@@ -96,7 +96,7 @@ export class RoutesController {
     }
 
     @Patch(':id')
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Actualizar una ruta existente',
         description: 'Permite modificar el origen, destino o tarifa de una ruta existente.',
@@ -137,7 +137,7 @@ export class RoutesController {
     }
 
     @Delete(':id')
-    @Roles(Role.ADMIN, Role.COMPANY_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
         summary: 'Eliminar una ruta',
         description: 'Elimina una ruta del sistema perteneciente a la compañía del usuario.',

@@ -1,14 +1,12 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { Controller, Post, Get, Patch, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TicketsService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
-import { TicketResponseDto } from './dto/ticket-response.dto';
-import { HttpErrorResponseDto } from '../common/dto/error-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { HttpErrorResponseDto } from '../common/dto/error-response.dto';
 
 @ApiTags('Tickets')
 @ApiBearerAuth('JWT-auth')
@@ -18,149 +16,42 @@ export class TicketsController {
     constructor(private readonly ticketsService: TicketsService) { }
 
     @Post()
-    @Roles(Role.PASSENGER, Role.COMPANY_ADMIN, Role.ADMIN)
+    @Roles(Role.PASSENGER)
     @ApiOperation({
-        summary: 'Reservar un nuevo boleto de viaje',
-        description: 'Crea una reserva de asiento para el usuario autenticado y descuenta 1 cupo disponible en el viaje en una transacción atómica.',
+        summary: 'Reservar un tiquete/viaje',
+        description: 'Permite a un pasajero reservar un asiento en un viaje específico, descontando cupos de forma atómica.',
     })
-    @ApiResponse({
-        status: 201,
-        description: 'Boleto reservado exitosamente y asientos actualizados.',
-        type: TicketResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Datos inválidos.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autenticado.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'El viaje especificado no existe.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 409,
-        description: 'Conflicto: No hay asientos disponibles en este viaje o el asiento ya fue reservado.',
-        type: HttpErrorResponseDto,
-    })
+    @ApiResponse({ status: 201, description: 'Tiquete reservado exitosamente.' })
+    @ApiResponse({ status: 409, description: 'No hay asientos disponibles o el asiento ya está ocupado.', type: HttpErrorResponseDto })
     create(@Body() createTicketDto: CreateTicketDto, @Req() req: any) {
-        const userId = req.user.userId;
+        const userId = req.user.userId; // Asegúrate de que tu JWT guard inyecte userId o id según tu payload
         return this.ticketsService.create(createTicketDto, userId);
     }
 
-    @Get()
-    @Roles(Role.PASSENGER, Role.COMPANY_ADMIN, Role.ADMIN)
+    @Get('me')
+    @Roles(Role.PASSENGER)
     @ApiOperation({
-        summary: 'Obtener todos los boletos del usuario autenticado',
-        description: 'Retorna el historial completo de boletos y reservas del pasajero en sesión junto con los datos del viaje, ruta y bus.',
+        summary: 'Listar mis tiquetes o viajes reservados',
+        description: 'Retorna el historial de tiquetes y viajes reservados por el pasajero autenticado.',
     })
-    @ApiResponse({
-        status: 200,
-        description: 'Lista de boletos obtenida exitosamente.',
-        type: [TicketResponseDto],
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autenticado.',
-        type: HttpErrorResponseDto,
-    })
-    findAll(@Req() req: any) {
+    @ApiResponse({ status: 200, description: 'Lista de tiquetes obtenida correctamente.' })
+    findAllMyTickets(@Req() req: any) {
         const userId = req.user.userId;
         return this.ticketsService.findAllByUser(userId);
     }
 
     @Patch(':id/cancel')
-    @Roles(Role.PASSENGER, Role.COMPANY_ADMIN, Role.ADMIN)
+    @Roles(Role.PASSENGER, Role.COMPANY_ADMIN, Role.SUPER_ADMIN)
     @ApiOperation({
-        summary: 'Cancelar un boleto existente',
-        description: 'Cancela la reserva de un boleto y devuelve el asiento como disponible al viaje asociado.',
+        summary: 'Cancelar un viaje o tiquete reservado',
+        description: 'Permite al pasajero dueño del tiquete (o a un admin) cancelar su reserva, liberando automáticamente el asiento.',
     })
-    @ApiParam({
-        name: 'id',
-        type: String,
-        description: 'Identificador único del boleto a cancelar (UUID)',
-        example: '7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'Boleto cancelado exitosamente y asiento liberado.',
-        type: TicketResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autenticado.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'Prohibido. No tienes permisos para cancelar este boleto.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'El boleto no existe.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 409,
-        description: 'El boleto ya se encuentra en estado CANCELLED.',
-        type: HttpErrorResponseDto,
-    })
-    cancel(@Param('id') id: string, @Req() req: any) {
+    @ApiResponse({ status: 200, description: 'Tiquete cancelado y asiento liberado exitosamente.' })
+    @ApiResponse({ status: 403, description: 'No tienes permisos para cancelar este tiquete.', type: HttpErrorResponseDto })
+    @ApiResponse({ status: 404, description: 'El tiquete no existe.', type: HttpErrorResponseDto })
+    cancelTicket(@Param('id') id: string, @Req() req: any) {
         const userId = req.user.userId;
         const userRole = req.user.role;
         return this.ticketsService.cancel(id, userId, userRole);
-    }
-
-    @Patch(':id/status')
-    @Roles(Role.PASSENGER, Role.COMPANY_ADMIN, Role.ADMIN)
-    @ApiOperation({
-        summary: 'Actualizar el estado de un boleto',
-        description: 'Modifica el estado del boleto (por ejemplo, a PAID o RESERVED) por el propietario o administrador.',
-    })
-    @ApiParam({
-        name: 'id',
-        type: String,
-        description: 'Identificador único del boleto (UUID)',
-        example: '7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d',
-    })
-    @ApiResponse({
-        status: 200,
-        description: 'Estado del boleto actualizado correctamente.',
-        type: TicketResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Estado inválido proporcionado en el cuerpo.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'No autenticado.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 403,
-        description: 'No tienes permisos para modificar este boleto.',
-        type: HttpErrorResponseDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'El boleto no existe.',
-        type: HttpErrorResponseDto,
-    })
-    updateStatus(
-        @Param('id') id: string,
-        @Body() updateTicketStatusDto: UpdateTicketStatusDto,
-        @Req() req: any,
-    ) {
-        const userId = req.user.userId;
-        const userRole = req.user.role;
-        return this.ticketsService.updateStatus(id, updateTicketStatusDto.status, userId, userRole);
     }
 }

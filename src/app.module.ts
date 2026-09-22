@@ -8,6 +8,8 @@ import { BusModule } from './bus/bus.module';
 import { RoutesModule } from './routes/routes.module';
 import { TripModule } from './trip/trip.module';
 import { TicketModule } from './ticket/ticket.module';
+import { UsersModule } from './users/users.module';
+import { InvitationsModule } from './invitation/invitation.module';
 
 @Module({
   imports: [
@@ -20,8 +22,10 @@ import { TicketModule } from './ticket/ticket.module';
     RoutesModule,
     TripModule,
     TicketModule,
+    UsersModule,
+    InvitationsModule, // Módulo correctamente importado
   ],
-  controllers: [AppController],
+  controllers: [AppController], // Solo el controlador raíz global
   providers: [AppService],
 })
 export class AppModule { }
