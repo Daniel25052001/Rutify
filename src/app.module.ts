@@ -10,6 +10,8 @@ import { TripModule } from './trip/trip.module';
 import { TicketModule } from './ticket/ticket.module';
 import { UsersModule } from './users/users.module';
 import { InvitationsModule } from './invitation/invitation.module';
+import { CompanyModule } from './company/company.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -23,7 +25,9 @@ import { InvitationsModule } from './invitation/invitation.module';
     TripModule,
     TicketModule,
     UsersModule,
-    InvitationsModule, // Módulo correctamente importado
+    InvitationsModule,
+    CompanyModule,
+    SuperAdminModule,
   ],
   controllers: [AppController], // Solo el controlador raíz global
   providers: [AppService],

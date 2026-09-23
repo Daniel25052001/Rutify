@@ -37,12 +37,14 @@ model User {
 
 model Company {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
   nit       String   @unique
-  phone     String
+  address   String?
+  isActive  Boolean  @default(true)
+  phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  
   buses       Bus[]
   routes      Route[]
   users       User[]
@@ -123,4 +125,16 @@ model Ticket {
 
   @@unique([tripId, seatNumber])
   @@map("tickets")
+}
+
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // Ej: 'CREATE_COMPANY', 'UPDATE_USER_ROLE', etc.
+  target    String   // Ej: ID o descripción del recurso afectado
+  details   String?  // Información adicional en texto o JSON stringificado
+  userId    String?  // ID del administrador o usuario que realizó la acción
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }
