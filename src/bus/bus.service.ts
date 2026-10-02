@@ -27,13 +27,43 @@ export class BusesService {
         });
     }
 
-    async findAll(user: { role: Role; companyId?: string }) {
-        const filter = user.role === Role.SUPER_ADMIN ? {} : { companyId: user.companyId };
+    async findAll(user: any, page: number = 1, limit: number = 10, search?: string) {
+        const skip = (page - 1) * limit;
 
-        return this.prisma.bus.findMany({
-            where: filter,
-            include: { company: true },
-        });
+        // Construir condiciones de filtrado
+        const where: any = {};
+
+        // Filtrar por compañía si no es super admin
+        if (user.role !== 'SUPER_ADMIN' && user.companyId) {
+            where.companyId = user.companyId;
+        }
+
+        // Filtrar por placa si viene un término de búsqueda
+        if (search) {
+            where.plate = {
+                contains: search,
+                mode: 'insensitive',
+            };
+        }
+
+        const [buses, total] = await Promise.all([
+            this.prisma.bus.findMany({
+                skip,
+                take: limit,
+                where,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.bus.count({ where }),
+        ]);
+
+        return {
+            data: buses,
+            meta: {
+                total,
+                page,
+                lastPage: Math.ceil(total / limit),
+            },
+        };
     }
 
     async findOne(id: string, user: { role: Role; companyId?: string }) {

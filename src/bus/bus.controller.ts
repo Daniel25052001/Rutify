@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { BusesService } from './bus.service';
 import { CreateBusDto, UpdateBusDto } from './dto/bus-dto';
 import { BusResponseDto } from './dto/bus-response.dto';
@@ -50,24 +50,33 @@ export class BusesController {
     create(@Body() createBusDto: CreateBusDto, @Req() req: any) {
         return this.busesService.create(createBusDto, req.user);
     }
-
     @Get()
     @ApiOperation({
-        summary: 'Listar todos los autobuses',
-        description: 'Retorna la lista de autobuses pertenecientes a la compañía del usuario autenticado (o todos si es ADMIN global).',
+        summary: 'Listar autobuses con paginación y búsqueda',
+        description: 'Retorna una lista paginada de autobuses pertenecientes a la compañía del usuario autenticado, permitiendo filtrar por placa.',
     })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número de página (por defecto 1)' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Cantidad de registros por página (por defecto 10)' })
+    @ApiQuery({ name: 'search', required: false, type: String, description: 'Término de búsqueda para filtrar por placa' })
     @ApiResponse({
         status: 200,
-        description: 'Listado de autobuses obtenido exitosamente.',
-        type: [BusResponseDto],
+        description: 'Listado paginado de autobuses obtenido exitosamente.',
     })
     @ApiResponse({
         status: 401,
         description: 'No autenticado.',
         type: HttpErrorResponseDto,
     })
-    findAll(@Req() req: any) {
-        return this.busesService.findAll(req.user);
+    findAll(
+        @Req() req: any,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+        @Query('search') search?: string,
+    ) {
+        const pageNumber = page ? parseInt(page, 10) : 1;
+        const limitNumber = limit ? parseInt(limit, 10) : 10;
+
+        return this.busesService.findAll(req.user, pageNumber, limitNumber, search);
     }
 
     @Get(':id')
