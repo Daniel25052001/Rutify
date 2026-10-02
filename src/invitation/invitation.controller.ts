@@ -1,11 +1,11 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Invitations')
 @Controller('invitations')
@@ -14,6 +14,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 export class InvitationController {
     constructor(private readonly invitationService: InvitationService) { }
 
+    /**
+     * Crea una nueva invitación corporativa vinculada a una compañía y un rol específico.
+     * 
+     * @param dto - Objeto de transferencia de datos con el correo, rol y ID de la compañía.
+     * @returns Los detalles de la invitación generada y su token único.
+     */
     @Post()
     @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN) // Restringido exclusivamente a administradores
     @ApiOperation({
@@ -28,18 +34,36 @@ export class InvitationController {
         return await this.invitationService.createInvitation(dto);
     }
 
+    /**
+     * Obtiene el listado paginado del historial de invitaciones emitidas en la plataforma.
+     * 
+     * @param page - Número de la página solicitada (por defecto 1).
+     * @param limit - Cantidad máxima de registros por página (por defecto 10).
+     * @returns Un objeto estructurado con la data paginada y los metadatos de control.
+     */
     @Get()
     @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
-        summary: 'Listar todas las invitaciones',
-        description: 'Retorna el historial completo de invitaciones emitidas en la plataforma.',
+        summary: 'Listar invitaciones con paginación',
+        description: 'Retorna el historial paginado de invitaciones emitidas en la plataforma.',
     })
-    @ApiResponse({ status: 200, description: 'Lista de invitaciones obtenida exitosamente.' })
+    @ApiQuery({ name: 'page', required: false, description: 'Número de página (por defecto 1)' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Cantidad de elementos por página (por defecto 10)' })
+    @ApiResponse({ status: 200, description: 'Lista paginada de invitaciones obtenida exitosamente.' })
     @HttpCode(HttpStatus.OK)
-    async findAll() {
-        return await this.invitationService.findAllInvitations();
+    async findAll(
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10,
+    ) {
+        return await this.invitationService.findAllInvitations(page, limit);
     }
 
+    /**
+     * Revoca y elimina una invitación activa del sistema mediante su identificador único.
+     * 
+     * @param id - UUID único de la invitación a revocar.
+     * @returns Mensaje de confirmación de revocación exitosa.
+     */
     @Delete(':id')
     @Roles(Role.SUPER_ADMIN, Role.COMPANY_ADMIN)
     @ApiOperation({
