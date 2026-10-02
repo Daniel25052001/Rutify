@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  
 }
 
 enum Role {
@@ -17,6 +18,11 @@ enum TicketStatus {
   RESERVED
   PAID
   CANCELLED
+}
+
+enum BusStatus {
+  ACTIVE
+  MAINTENANCE
 }
 
 model User {
@@ -67,14 +73,16 @@ model Invitation {
   @@map("invitations")
 }
 
+
 model Bus {
-  id        String   @id @default(uuid())
-  plate     String   @unique
+  id        String      @id @default(uuid())
+  plate     String      @unique
   capacity  Int
+  status    BusStatus   @default(ACTIVE) // <-- Cambiado de String a BusStatus (sin comillas)
   companyId String
-  company   Company  @relation(fields: [companyId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  company   Company     @relation(fields: [companyId], references: [id])
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   trips     Trip[]
 

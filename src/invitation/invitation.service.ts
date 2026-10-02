@@ -59,14 +59,36 @@ export class InvitationService {
     }
 
     /**
-     * Obtiene el listado completo de invitaciones ordenadas por fecha de creación descendente.
-     */
-    async findAllInvitations() {
-        return await this.prisma.invitation.findMany({
-            orderBy: { createdAt: 'desc' },
-        });
-    }
+         * Obtiene el listado paginado de invitaciones ordenadas por fecha de creación descendente.
+         * 
+         * @param page - Número de la página actual.
+         * @param limit - Cantidad de elementos por página.
+         */
+    async findAllInvitations(page: number = 1, limit: number = 10) {
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 10;
+        const skip = (pageNum - 1) * limitNum;
 
+        // Consultar los datos paginados y el conteo total en paralelo para optimizar rendimiento
+        const [data, total] = await Promise.all([
+            this.prisma.invitation.findMany({
+                skip: skip,
+                take: limitNum,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.invitation.count(),
+        ]);
+
+        return {
+            data,
+            meta: {
+                totalItems: total,
+                itemsPerPage: limitNum,
+                currentPage: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+            },
+        };
+    }
     /**
      * Revoca y elimina una invitación del sistema mediante su identificador único.
      * 
@@ -148,4 +170,13 @@ export class InvitationService {
             email: newUser.email,
         };
     }
+
+
+
+
+
+
+
+
+
 }
